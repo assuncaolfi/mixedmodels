@@ -168,3 +168,22 @@ def test_formula_attr(fit):
 
 def test_converged_flag(fit):
     assert fit.converged is True
+
+
+def test_summary_shows_family_and_link(fit):
+    s = str(fit.summary())
+    assert "Family: gaussian" in s
+    assert "Link: identity" in s
+    # Old `['gaussian']` formatting is gone.
+    assert "['gaussian']" not in s
+
+
+def test_summary_shows_non_canonical_link(sleepstudy):
+    from mixedmodels import Gaussian, LogLink, MixedModel
+
+    fit2 = MixedModel.from_formula(
+        "Reaction ~ Days + (Days | Subject)", sleepstudy, family=Gaussian(LogLink())
+    ).fit()
+    s = str(fit2.summary())
+    assert "Family: gaussian" in s
+    assert "Link: log" in s

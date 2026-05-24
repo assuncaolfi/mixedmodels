@@ -16,9 +16,11 @@ class Summary:
     def _render(self) -> str:
         m = self.model
         lines = []
-        lines.append(f"Mixed model fit by Laplace maximum likelihood ['{m.family.name}']")
-        lines.append(f"Formula: {m.formula}")
-        lines.append(f"   Data: n = {m.n_observations()}")
+        lines.append("Mixed model fit by Laplace maximum likelihood")
+        lines.append(f" Formula: {m.formula}")
+        lines.append(f"  Family: {m.family.name}")
+        lines.append(f"    Link: {m.family.link.name}")
+        lines.append(f"       n: {m.n_observations()}")
         lines.append(f"    logLik = {m.log_likelihood():9.4f}   deviance = {m.deviance():9.4f}")
         lines.append(
             f"       AIC = {m.aic():9.4f}        BIC = {m.bic():9.4f}   df = {m.degrees_of_freedom()}"

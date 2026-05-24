@@ -3,21 +3,8 @@
 A Python package for fitting linear and generalized linear mixed-effects
 models. 
 
-Inspired by 
-[lme4](https://github.com/lme4/lme4),
-[glmmTMB](https://github.com/glmmTMB/glmmTMB) and
-[MixedModels.jl](https://github.com/JuliaStats/MixedModels.jl). 
-For Bayesian mixed models in the same style, see
-[brms](https://github.com/paul-buerkner/brms) and
-[bambi](https://github.com/bambinos/bambi).
-
-The engine is JAX: every model is a joint negative log-likelihood `g(θ, b)`
-that is differentiated by `jax.grad` and marginalized over the random
-effects `b` via the Laplace approximation (inner Newton + `log det` of the
-Hessian wrt `b`). Both inner mode-finding and outer BFGS run inside a single
-`jax.jit`.
-
-See [`PLAN.md`](PLAN.md) for the design document.
+This package is inspired by [glmmTMB](https://github.com/glmmTMB/glmmTMB) and
+powered by JAX. See [`PLAN.md`](PLAN.md) for the design document.
 
 ## AI disclaimer
 
@@ -41,9 +28,11 @@ print(fit.summary())
 ```
 
 ```
-Mixed model fit by Laplace maximum likelihood ['gaussian']
-Formula: Reaction ~ Days + (Days | Subject)
-   Data: n = 180
+Mixed model fit by Laplace maximum likelihood
+ Formula: Reaction ~ Days + (Days | Subject)
+  Family: gaussian
+    Link: identity
+       n: 180
     logLik = -854.5069   deviance = 1709.0138
        AIC = 1721.0138        BIC = 1740.1716   df = 6
 
