@@ -29,21 +29,21 @@ Mixed model fit by Laplace maximum likelihood
   Family: gaussian
     Link: identity
        n: 180
-    logLik = -854.5069   deviance = 1709.0138
-       AIC = 1721.0138        BIC = 1740.1716   df = 6
+    logLik = -875.9697   deviance = 1751.9393
+       AIC = 1763.9393        BIC = 1783.0971   df = 6
 
 Random effects:
 Groups              Name                    Variance    Std.Dev.  Corr
-Subject             Intercept               624.1109     24.9822
-                    Days                     34.9985      5.9160    0.01
-Residual                                    485.8048     22.0410
+Subject             Intercept               565.5154     23.7806
+                    Days                     32.6822      5.7168    0.08
+Residual                                    654.9410     25.5918
 Number of obs: 180, groups: Subject 18
 
 Fixed effects:
            estimate  std_error        z        p  ci_lower  ci_upper
 term
-Intercept  249.8873     6.6330  37.6735   0.0000  236.8869  262.8877
-Days        10.6561     1.5072   7.0704   0.0000    7.7022   13.6101
+Intercept  251.4051     6.6323  37.9063   0.0000  238.4061  264.4041
+Days        10.4673     1.5022   6.9678   0.0000    7.5230   13.4116
 ```
 
 On a 16 GB MacBook Air M1, the first fit takes ~1.7s due to compilation. 
