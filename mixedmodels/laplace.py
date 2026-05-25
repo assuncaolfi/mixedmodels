@@ -82,9 +82,7 @@ def make_marginal_nll(g_fn, structure, max_iter: int = 50, tol: float = 1e-8):
     """
 
     def m(theta, b_init, *data):
-        b_hat = find_mode_implicit(
-            g_fn, structure, theta, b_init, data, max_iter=max_iter, tol=tol
-        )
+        b_hat = find_mode_implicit(g_fn, structure, theta, b_init, data, max_iter=max_iter, tol=tol)
         factor = structure.build(g_fn, theta, b_hat, data)
         logdet = structure.logdet(factor)
         q = b_hat.shape[0]
