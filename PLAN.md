@@ -79,10 +79,13 @@ the standard one-step trick:
    Laplace marginal exact and lets the outer BFGS converge cleanly even on
    GLMMs.
 
-The factor built in step 2 is returned and reused for `½ log det H`, saving
-one redundant factorization per outer iteration. The reuse drops a small
-`O(1/n)` higher-order term from the log-det gradient (the contribution
-through `b̂`), which is what TMB / glmmTMB do in practice.
+The factor for `½ log det H` is built **again** at the IFT-corrected `b̂`,
+so JAX tracks the dependence of H_bb on both `θ` directly and on `b̂(θ)`.
+For LMMs the second build is redundant (H_bb doesn't depend on `b`), but
+for GLMMs the indirect dependence is non-trivial — omitting it gives an
+inconsistent value/gradient pair on models with crossed REs or
+observation-level REs (e.g. the cbpp binomial GLMM) and the optimizer
+stops short of the true MLE.
 
 ### Structured `H_bb`
 

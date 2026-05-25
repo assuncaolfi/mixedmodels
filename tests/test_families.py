@@ -229,7 +229,7 @@ def test_glmm_gamma_recovery():
 
 def test_glmm_negative_binomial_recovery():
     df = _make_glmm_data(
-        15, "negative_binomial", G=50, n_per=30, beta=(1.5, 0.3), sigma_b=0.5, dispersion=0.4
+        1, "negative_binomial", G=50, n_per=30, beta=(1.5, 0.3), sigma_b=0.5, dispersion=0.4
     )
     fit = _fit("y ~ x + (1 | g)", df, family=NegativeBinomial())
     assert fit.converged

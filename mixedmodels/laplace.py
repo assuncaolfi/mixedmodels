@@ -55,35 +55,37 @@ def find_mode_implicit(g_fn, structure, theta, b_init, data, max_iter=50, tol=1e
 
     Phase 1: Newton under `stop_gradient` to get a numerical b̂.
     Phase 2: one final Newton step from b̂, with θ left differentiable. The
-    result is numerically the same b̂, but with `db̂/dθ` correct via IFT.
+    result is numerically the same b̂, but JAX now sees
+    `b̂ = b_sg − H⁻¹ ∇g(θ, b_sg)`, whose derivative wrt θ equals exactly the
+    IFT formula `db̂/dθ = −H⁻¹ ∂²g/∂θ∂b`.
     """
     theta_sg = jax.lax.stop_gradient(theta)
     data_sg = jax.tree_util.tree_map(jax.lax.stop_gradient, data)
     b_sg = _newton_loop(g_fn, structure, theta_sg, b_init, data_sg, max_iter, tol)
 
-    # IFT step: use real theta (no stop_gradient) and real data. The factor
-    # built here is also what we want for log det H, so return it.
     grad_b = jax.grad(g_fn, argnums=1)(theta, b_sg, *data)
-    factor = structure.build(g_fn, theta, b_sg, data)
-    step = structure.solve(factor, grad_b)
-    return b_sg - step, factor
+    factor_sg = structure.build(g_fn, theta, b_sg, data)
+    step = structure.solve(factor_sg, grad_b)
+    return b_sg - step
 
 
 def make_marginal_nll(g_fn, structure, max_iter: int = 50, tol: float = 1e-8):
     """Return `m(θ, b_init, *data) -> (scalar, b_hat)`.
 
-    The Laplace-approximated marginal nll. `find_mode_implicit` builds the
-    H_bb factor once for the IFT step and we reuse it for the `log det H`
-    term — saving a redundant `structure.build` per outer iteration. The
-    factor is at the pre-IFT-step `b_sg`; since `b_hat ≈ b_sg` numerically,
-    this drops a higher-order (b̂ → θ) contribution to the log-det gradient,
-    which is `O(1/n)` and is what TMB / glmmTMB do in practice.
+    The Laplace-approximated marginal nll. We build the H_bb factor twice:
+    once inside `find_mode_implicit` for the IFT step on b̂, and once here
+    at the IFT-corrected b̂ so the `log det H` term carries the correct
+    gradient — including the contribution through `b̂(θ)`, which matters
+    for non-Gaussian families where H_bb depends on `b` via the weight
+    matrix `W = diag(∂²nll/∂η²)`. For LMMs the second build is redundant
+    but cheap.
     """
 
     def m(theta, b_init, *data):
-        b_hat, factor = find_mode_implicit(
+        b_hat = find_mode_implicit(
             g_fn, structure, theta, b_init, data, max_iter=max_iter, tol=tol
         )
+        factor = structure.build(g_fn, theta, b_hat, data)
         logdet = structure.logdet(factor)
         q = b_hat.shape[0]
         val = g_fn(theta, b_hat, *data) + 0.5 * logdet - 0.5 * q * jnp.log(2.0 * jnp.pi)
