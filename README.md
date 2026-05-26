@@ -46,8 +46,8 @@ Intercept  251.4051     6.6323  37.9063   0.0000  238.4061  264.4041
 Days        10.4673     1.5022   6.9678   0.0000    7.5230   13.4116
 ```
 
-On a 16 GB MacBook Air M1, the first fit takes ~1.7s due to compilation. 
-Subsequent fits of the same model take ~18 ms.
+On a 16 GB MacBook Air M1, the first fit takes ~2s due to compilation. 
+Subsequent fits of the same model take ~20 ms.
 
 ## API
 
