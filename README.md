@@ -88,7 +88,7 @@ fit.sigma()                                 # residual SD (Gaussian); None other
 # Fitted values, residuals, predict, simulate
 fit.fitted()
 fit.residuals(type="response")              # also "pearson", "working"
-fit.predict(newdata, include_re=True)
+fit.predict(newdata, include_re=True, allow_new_levels=False)
 fit.simulate(n=100, seed=0)
 
 # Likelihood / IC

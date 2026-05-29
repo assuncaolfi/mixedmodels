@@ -306,35 +306,95 @@ class MixedModel:
         raise ValueError(f"Unknown residual type {type!r}")
 
     def predict(
-        self, newdata: pd.DataFrame | None = None, *, include_re: bool = True
+        self,
+        newdata: pd.DataFrame | None = None,
+        *,
+        include_re: bool = True,
+        allow_new_levels: bool = False,
     ) -> np.ndarray:
-        """Linear-predictor (η) predictions on the response scale."""
+        """Predicted means on the response scale (i.e. `inv_link(η̂)`).
+
+        Parameters
+        ----------
+        newdata : DataFrame, optional
+            If `None`, predict on the training data.
+        include_re : bool, default True
+            Include the random-effects contribution `Z b̂`. Pass `False`
+            for the population-level prediction `X β̂`.
+        allow_new_levels : bool, default False
+            If `newdata` contains levels of a grouping factor that were
+            not seen during fitting, raise `ValueError` (the default) or,
+            if `True`, predict using `b = 0` for those observations
+            — i.e. the population-level random effect. Matches the
+            `lme4` / `brms` argument of the same name.
+        """
         self._check_fit()
+        beta, _, _ = self.spec.split_theta(jnp.asarray(self._theta))
+        b_blocks = self.spec.split_b(jnp.asarray(self._b_hat))
+
         if newdata is None:
-            X = self.matrices.X
-            re_jax = self._data_jax[3]
-            b_blocks = self.spec.split_b(jnp.asarray(self._b_hat))
-            beta, _, _ = self.spec.split_theta(jnp.asarray(self._theta))
-            if include_re:
-                eta = linear_predictor(beta, b_blocks, jnp.asarray(X), re_jax)
-            else:
-                eta = jnp.asarray(X) @ beta
+            X = jnp.asarray(self.matrices.X)
+            if not include_re:
+                eta = X @ beta
+                return np.asarray(self.family.inv_link(eta))
+            eta = linear_predictor(beta, b_blocks, X, self._data_jax[3])
             return np.asarray(self.family.inv_link(eta))
-        else:
-            # Rebuild matrices on new data using the same formula
-            parsed = parse_formula(self.formula)
-            mm_new = build_matrices(parsed, newdata)
-            beta, _, _ = self.spec.split_theta(jnp.asarray(self._theta))
-            re_jax_new = to_jax(mm_new)[3]
-            if include_re:
-                b_blocks = self.spec.split_b(jnp.asarray(self._b_hat))
-                # NB: requires the grouping factor levels in newdata to be a subset
-                # of the training levels; otherwise group_idx is invalid. A more
-                # robust implementation would zero out unknown groups; left as TODO.
-                eta = linear_predictor(beta, b_blocks, jnp.asarray(mm_new.X), re_jax_new)
-            else:
-                eta = jnp.asarray(mm_new.X) @ beta
+
+        # ----- newdata path -----
+        from formulaic import Formula
+
+        parsed = parse_formula(self.formula)
+        # One-sided formula avoids requiring the response column in newdata.
+        X_new_df = Formula(f"~ {parsed.fixed_rhs}").get_model_matrix(newdata)
+        X_new = np.asarray(X_new_df, dtype=np.float64)
+        if X_new.shape[1] != self.matrices.p:
+            raise ValueError(
+                f"newdata produced {X_new.shape[1]} fixed-effects columns; "
+                f"the fitted model has {self.matrices.p}. Check that all "
+                "categorical columns have the same levels as the training data."
+            )
+
+        if not include_re:
+            eta = jnp.asarray(X_new) @ beta
             return np.asarray(self.family.inv_link(eta))
+
+        # Random effects: look up each newdata row's group against the
+        # training levels stored on the RE block. Unknown levels either
+        # raise or get mapped to a zero row of b, depending on the flag.
+        eta = jnp.asarray(X_new) @ beta
+        for (expr, grp), re_block, b_block in zip(parsed.random, self.matrices.re, b_blocks):
+            if grp not in newdata.columns:
+                raise ValueError(f"Grouping factor {grp!r} is missing from newdata.")
+            level_to_idx = {lev: i for i, lev in enumerate(re_block.group_levels)}
+            new_groups = newdata[grp].astype(str).to_numpy()
+            new_codes = np.empty(len(newdata), dtype=np.int32)
+            unknown_mask = np.zeros(len(newdata), dtype=bool)
+            for i, lvl in enumerate(new_groups):
+                if lvl in level_to_idx:
+                    new_codes[i] = level_to_idx[lvl]
+                else:
+                    unknown_mask[i] = True
+
+            if unknown_mask.any():
+                if not allow_new_levels:
+                    unknown = sorted(set(new_groups[unknown_mask]))
+                    raise ValueError(
+                        f"newdata contains levels of {grp!r} not seen during "
+                        f"fitting: {unknown}. Pass allow_new_levels=True to "
+                        "use b=0 for these observations."
+                    )
+                new_codes[unknown_mask] = b_block.shape[0]
+                extended_b = jnp.concatenate(
+                    [b_block, jnp.zeros((1, b_block.shape[1]), dtype=b_block.dtype)],
+                    axis=0,
+                )
+            else:
+                extended_b = b_block
+
+            Ze_new = np.asarray(Formula(f"~ {expr}").get_model_matrix(newdata), dtype=np.float64)
+            eta = eta + jnp.sum(jnp.asarray(Ze_new) * extended_b[jnp.asarray(new_codes)], axis=1)
+
+        return np.asarray(self.family.inv_link(eta))
 
     # ------------------------------------------------------------------
     # Likelihood / information criteria
