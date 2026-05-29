@@ -179,20 +179,39 @@ clipped-log form. Variance functions are link-independent.
 
 ## 5. Validation
 
-- LMM (Gaussian): each fit is cross-checked against an independent direct
-  V-matrix marginal-likelihood optimizer on the sleepstudy data
-  (`tests/test_lmm_sleepstudy.py`). Matches to ~5 decimals.
-- Every family is cross-validated against `statsmodels.GLM` in the
-  no-random-effects limit (`tests/test_families.py`).
-- Non-canonical links (probit, cloglog, log-Gaussian, sqrt-Poisson) are
-  cross-validated against `statsmodels.GLM` (`tests/test_links.py`).
-- Every GLMM family has a seeded simulation-recovery test.
-- Multi-grouping-factor LMM and GLMM exercise the `DenseHessian` fallback
-  (`tests/test_multi_re.py`).
+Everything that involves a fitted model is checked against `glmmTMB` as
+the single source of truth. `tests/cases.py` declares one :class:`Case`
+per model with its expected fixed effects, random-effect SDs and
+correlations, residual scale and log-likelihood; a single parametrized
+test in `tests/test_glmmtmb.py` fits each case and asserts agreement to
+1e-3 by default. Current cases cover the following feature combinations,
+all against `glmmTMB 1.1.14`:
+
+| case | family / link | RE structure | dataset |
+|---|---|---|---|
+| `sleepstudy_random_intercept` | Gaussian / identity | `(1\|Subject)` | lme4 |
+| `sleepstudy_random_slope` | Gaussian / identity | `(1+Days\|Subject)` | lme4 |
+| `Dyestuff` | Gaussian / identity | `(1\|Batch)` | lme4 |
+| `Penicillin` | Gaussian / identity | `(1\|plate)+(1\|sample)` | lme4 |
+| `cbpp_basic` | Binomial / logit | `(1\|herd)` | lme4 |
+| `cbpp_obs` | Binomial / logit | `(1\|herd)+(1\|obs)` | lme4 |
+| `cbpp_probit` | Binomial / probit | `(1\|herd)` | lme4 |
+| `poisson_log` | Poisson / log | `(1\|g)` | seeded synthetic |
+| `gamma_log` | Gamma / log | `(1\|g)` | seeded synthetic |
+| `negbin_log` | NegBin / log | `(1\|g)` | seeded synthetic |
+
+Reference values were produced once by `scripts/fit_canonical.R` and are
+stored verbatim in `tests/cases.py`. Regeneration requires R ≥ 4.4 with
+the `glmmTMB` and `jsonlite` packages.
+
+Orthogonal scaffolding tests:
+
 - The lme4-style API (`fixed_effects`, `random_effects`, `vcov`,
   `confidence_intervals`, `bootstrap`, `simulate`, `predict`, `residuals`,
   `aic`/`bic`/`dof`, etc.) is covered in `tests/test_api.py`.
-- Formula parsing is unit-tested (`tests/test_formula.py`).
+- Inference mechanics (Wald, profile, parametric bootstrap) in
+  `tests/test_inference.py`.
+- Formula parsing is unit-tested in `tests/test_formula.py`.
 
 ## 6. Current limitations
 
