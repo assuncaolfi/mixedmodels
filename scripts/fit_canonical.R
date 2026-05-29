@@ -144,4 +144,7 @@ write.csv(poisson_df, "/tmp/poisson_log_data.csv", row.names = FALSE)
 write.csv(gamma_df,   "/tmp/gamma_log_data.csv",   row.names = FALSE)
 write.csv(nb_df,      "/tmp/negbin_log_data.csv",  row.names = FALSE)
 
-cat(toJSON(fits, pretty = TRUE, auto_unbox = TRUE, digits = 10))
+writeLines(
+  toJSON(fits, pretty = TRUE, auto_unbox = TRUE, digits = 10),
+  "/tmp/fits.json"
+)

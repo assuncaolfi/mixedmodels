@@ -19,15 +19,8 @@ dev = [
     "pytest>=7",
     "pytest-benchmark",
     "ruff",
-    "statsmodels>=0.14",  # used by `tests/cases.py` to fetch the canonical
-                          # lme4 datasets (sleepstudy, cbpp, Dyestuff,
-                          # Penicillin) via `get_rdataset`.
+    "statsmodels>=0.14",
 ]
-
-# Regenerating `tests/cases.py` reference values requires R ≥ 4.4 with the
-# `glmmTMB` and `jsonlite` packages installed. Then:
-#     Rscript scripts/fit_canonical.R > /tmp/fits.json
-# and copy the values into the `Case` declarations.
 
 [build-system]
 requires = ["hatchling"]
