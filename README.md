@@ -4,7 +4,7 @@ A Python package for fitting linear and generalized linear mixed-effects
 models. 
 
 `mixedmodels` is inspired by [glmmTMB](https://github.com/glmmTMB/glmmTMB) and
-powered by JAX. 
+powered by [JAX](https://github.com/jax-ml/jax). 
 
 Most of `mixedmodels` was written with a coding agent driving the design and
 tests. Check results against more mature packages. See [`PLAN.md`](PLAN.md) 
